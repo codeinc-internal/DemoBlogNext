@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } =  params
     const comments = await CommentModel.getCommentsByPostId(id)
     return NextResponse.json(comments)
   } catch (error) {
@@ -21,7 +21,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } =  params
     const session = await getServerSession()
 
     if (!session?.user) {

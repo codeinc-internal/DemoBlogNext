@@ -7,17 +7,17 @@ import { ObjectId } from "mongodb"
 async function isPostAuthor(postId: string, userId: string): Promise<boolean> {
   try {
     const post = await PostModel.getPostById(postId)
-    if (!post || !post.authorId) return false
+    if (!post?.authorId) return false
 
-    const postAuthorId =
+    const authorId =
       typeof post.authorId === "string"
         ? post.authorId
         : post.authorId.toString()
 
-    if (postAuthorId === userId) return true
+    if (authorId === userId) return true
 
     try {
-      return new ObjectId(postAuthorId).equals(new ObjectId(userId))
+      return new ObjectId(authorId).equals(new ObjectId(userId))
     } catch {
       return false
     }
@@ -31,16 +31,19 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
-    const post = await PostModel.getPostById(id)
+    const { id } = params
 
+    const post = await PostModel.getPostById(id)
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 })
     }
 
     return NextResponse.json({ post })
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch post" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Failed to fetch post" },
+      { status: 500 }
+    )
   }
 }
 
@@ -49,27 +52,25 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params
+    const { id } = params
     const session = await getServerSession(authOptions)
 
     if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "Unauthorized - Please login" },
+        { error: "Unauthorized" },
         { status: 401 }
       )
     }
 
-    const isAuthor = await isPostAuthor(id, session.user.id)
-    if (!isAuthor) {
+    if (!(await isPostAuthor(id, session.user.id))) {
       return NextResponse.json(
-        { error: "Forbidden - You can only edit your own posts" },
+        { error: "Forbidden" },
         { status: 403 }
       )
     }
 
-    const body = await request.json()
-
-    const success = await PostModel.updatePost(id, body)
+    const data = await request.json()
+    const success = await PostModel.updatePost(id, data)
 
     if (!success) {
       return NextResponse.json(
@@ -97,15 +98,14 @@ export async function DELETE(
 
     if (!session?.user?.id) {
       return NextResponse.json(
-        { error: "Unauthorized - Please login" },
+        { error: "Unauthorized" },
         { status: 401 }
       )
     }
 
-    const isAuthor = await isPostAuthor(id, session.user.id)
-    if (!isAuthor) {
+    if (!(await isPostAuthor(id, session.user.id))) {
       return NextResponse.json(
-        { error: "Forbidden - You can only delete your own posts" },
+        { error: "Forbidden" },
         { status: 403 }
       )
     }
@@ -113,7 +113,10 @@ export async function DELETE(
     const success = await PostModel.deletePost(id)
 
     if (!success) {
-      return NextResponse.json({ error: "Post not found" }, { status: 404 })
+      return NextResponse.json(
+        { error: "Post not found" },
+        { status: 404 }
+      )
     }
 
     return NextResponse.json({ message: "Post deleted successfully" })
